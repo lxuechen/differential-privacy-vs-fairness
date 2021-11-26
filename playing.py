@@ -55,7 +55,6 @@ def test(net, epoch, name, testloader, vis=True):
     net.eval()
     correct = 0
     total = 0
-    i = 0
     correct_labels = []
     predict_labels = []
     with torch.no_grad():
@@ -176,7 +175,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             running_loss = 0.0
 
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
-        logger.info(f"{pos}: {np.mean(norms)}")
+        logger.info(f"{pos}: {torch.stack(norms).mean()}")
         if helper.params['dataset'] == 'dif':
             plot(epoch, np.mean(norms), f'dif_norms_class/{pos}')
         else:
@@ -349,16 +348,15 @@ if __name__ == '__main__':
     else:
         raise Exception('Specify `optimizer` in params.yaml.')
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                                                     milestones=[0.5 * epochs,
-                                                                 0.75 * epochs], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones=[0.5 * epochs, 0.75 * epochs], gamma=0.1
+    )
 
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(table)
     logger.info(helper.labels)
     epoch = 0
-    # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)

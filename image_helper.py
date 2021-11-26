@@ -87,6 +87,7 @@ class ImageHelper(Helper):
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset,
             batch_size=self.params['batch_size'],
+            # lxuechen: `ds_indices` is the list of all selected examples.
             sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
             drop_last=True
         )
@@ -121,8 +122,12 @@ class ImageHelper(Helper):
             ds_indices.extend(indices[:subset_len])
         logger.info(sum)
         logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
-        self.test_loader_unbalanced = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
-            'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
+        self.test_loader_unbalanced = torch.utils.data.DataLoader(
+            self.test_dataset,
+            batch_size=self.params['batch_size'],
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
+            drop_last=True
+        )
 
     def load_cifar_data(self, dataset):
         logger.info('Loading data')
