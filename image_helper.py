@@ -46,8 +46,8 @@ class ImageHelper(Helper):
         unbalanced_sum = 0
         for key, indices in per_class_list.items():  # lxuechen: per_class_list maps class id to list of image ids.
             # TODO(lxuechen): This loop seems wrong. class 0 and class 1-9 don't follow same procedure.
-            #   More generally, should follow power law -- sample size of ith cluster \propto mu^i
-            #   Currently doesn't follow power law for indices > 1.
+            #   More generally, should actually decay exponentially-- sample size of ith cluster \propto mu^i.
+            #   Currently isn't so for index > 0.
             if key and key != key_to_drop:
                 unbalanced_sum += len(indices)
             elif key and key == key_to_drop:
