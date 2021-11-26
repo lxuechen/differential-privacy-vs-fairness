@@ -207,26 +207,19 @@ def train(trainloader, model, optimizer, epoch):
             inputs, labels = data
 
         keys_input = labels == helper.params['key_to_drop']
-        inputs_keys = inputs[keys_input]
-
         inputs[keys_input] = torch.tensor(ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
                                                                           sigma=helper.params['csigma']))
         inputs = inputs.to(device)
         labels = labels.to(device)
-        # zero the parameter gradients
         optimizer.zero_grad()
 
-        # forward + backward + optimize
         outputs = model(inputs)
         loss = criterion(outputs, labels)
 
         loss.backward()
         optimizer.step()
-        # logger.info statistics
         running_loss += loss.item()
         if i > 0 and i % 20 == 0:
-            #             logger.info('[%d, %5d] loss: %.3f' %
-            #                   (epoch + 1, i + 1, running_loss / 2000))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
 
@@ -242,7 +235,7 @@ if __name__ == '__main__':
     writer.add_custom_scalars(layout)
 
     with open(args.params) as f:
-        params = yaml.load(f)
+        params = yaml.safe_load(f)
     if params.get('model', False) == 'word':
         helper = TextHelper(current_time=d, params=params, name='text')
 
@@ -326,7 +319,6 @@ if __name__ == '__main__':
         net = inception_v3(pretrained=True)
         net.fc = nn.Linear(2048, num_classes)
         net.aux_logits = False
-        #model = torch.nn.DataParallel(model).cuda()
     elif helper.params['model'] == 'mobilenet':
         net = MobileNetV2(n_class=num_classes, input_size=64)
     elif helper.params['model'] == 'word':
