@@ -5,48 +5,37 @@ from text_helper import TextHelper
 
 logger = logging.getLogger('logger')
 
-import json
 from datetime import datetime
 import argparse
 from scipy import ndimage
-import torch
-import torchvision
-import os
-import torchvision.transforms as transforms
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
 from models.mobilenet import MobileNetV2
-from helper import Helper
 from image_helper import ImageHelper
 from models.densenet import DenseNet
 from models.simple import Net, FlexiNet, reseed
 import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from tqdm import tqdm as tqdm
-import time
-import random
 import yaml
 from utils.text_load import *
-from models.resnet import Res, PretrainedRes
-from utils.utils import dict_html, create_table, plot_confusion_matrix
+from utils.utils import create_table, plot_confusion_matrix
 from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 layout = {'cosine': {
     'cosine': ['Multiline', ['cosine/0',
-                                         'cosine/1',
-                                         'cosine/2',
-                                         'cosine/3',
-                                         'cosine/4',
-                                         'cosine/5',
-                                         'cosine/6',
-                                         'cosine/7',
-                                         'cosine/8',
-                                         'cosine/9']]}}
+                             'cosine/1',
+                             'cosine/2',
+                             'cosine/3',
+                             'cosine/4',
+                             'cosine/5',
+                             'cosine/6',
+                             'cosine/7',
+                             'cosine/8',
+                             'cosine/9']]}}
 
 
 def plot(x, y, name):
@@ -62,12 +51,11 @@ def compute_norm(model, norm_type=2):
     return total_norm
 
 
-
 def test(net, epoch, name, testloader, vis=True):
     net.eval()
     correct = 0
     total = 0
-    i=0
+    i = 0
     correct_labels = []
     predict_labels = []
     with torch.no_grad():
@@ -93,7 +81,7 @@ def test(net, epoch, name, testloader, vis=True):
         acc_list = list()
         acc_dict = dict()
         for i, name in enumerate(helper.labels):
-            class_acc = cm[i][i]/cm[i].sum() * 100
+            class_acc = cm[i][i] / cm[i].sum() * 100
             acc_dict[i] = class_acc
             logger.info(f'Class: {i}, accuracy: {class_acc}')
             plot(epoch, class_acc, name=f'accuracy_per_class/class_{name}')
@@ -102,7 +90,6 @@ def test(net, epoch, name, testloader, vis=True):
         fig2 = helper.plot_acc_list(acc_dict, epoch, name='per_class', accuracy=main_acc)
         writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
         torch.save(acc_dict, f"{helper.folder_path}/test_acc_class_{epoch}.pt")
-
 
         plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
         plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
@@ -123,7 +110,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             inputs, idxs, labels = data
         else:
             inputs, labels = data
-        
+
         inputs = inputs.to(device)
         labels = labels.to(device)
         optimizer.zero_grad()
@@ -133,7 +120,7 @@ def train_dp(trainloader, model, optimizer, epoch):
         running_loss += torch.mean(loss).item()
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
-        
+
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
@@ -175,12 +162,12 @@ def train_dp(trainloader, model, optimizer, epoch):
         if helper.params.get('count_norm_cosine_per_batch', False):
             total_grad_vec = helper.get_grad_vec(model, device)
             for k, vec in sorted(grad_vecs.items(), key=lambda t: t[0]):
-                vec = vec/count_vecs[k]
+                vec = vec / count_vecs[k]
                 cosine = torch.cosine_similarity(total_grad_vec, vec, dim=-1)
-                distance = torch.norm(total_grad_vec-vec)
+                distance = torch.norm(total_grad_vec - vec)
 
-                plot(i + epoch*len(trainloader), cosine, name=f'cosine/{k}')
-                plot(i + epoch*len(trainloader), distance, name=f'distance/{k}')
+                plot(i + epoch * len(trainloader), cosine, name=f'cosine/{k}')
+                plot(i + epoch * len(trainloader), distance, name=f'distance/{k}')
 
         optimizer.step()
 
@@ -280,10 +267,10 @@ if __name__ == '__main__':
         helper.sampler_per_class()
         logger.info('after sampler')
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
-                                        number_of_entries=params['number_of_entries'])
+                                         number_of_entries=params['number_of_entries'])
         logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
-              number_of_entries_test=params['number_of_entries_test'])
+        helper.sampler_exponential_class_test(
+            mu=mu, key_to_drop=params['key_to_drop'], number_of_entries_test=params['number_of_entries_test'])
         logger.info('after sampler test')
 
     helper.compute_rdp()
@@ -293,7 +280,7 @@ if __name__ == '__main__':
         num_classes = 100
     elif helper.params['dataset'] == 'inat':
         num_classes = len(helper.labels)
-        logger.info('num class: ', num_classes)  
+        logger.info('num class: ', num_classes)
     elif helper.params['dataset'] == 'dif':
         num_classes = len(helper.labels)
     else:
@@ -323,9 +310,9 @@ if __name__ == '__main__':
         net = MobileNetV2(n_class=num_classes, input_size=64)
     elif helper.params['model'] == 'word':
         net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
-                 ninp=helper.params['emsize'], nhid=helper.params['nhid'],
-                 nlayers=helper.params['nlayers'],
-                 dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
+                       ninp=helper.params['emsize'], nhid=helper.params['nhid'],
+                       nlayers=helper.params['nlayers'],
+                       dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
     else:
         net = Net()
 
@@ -335,7 +322,6 @@ if __name__ == '__main__':
         net = nn.DataParallel(net)
 
     net.to(device)
-
 
     if helper.params.get('resumed_model', False):
         logger.info('Resuming training...')
@@ -348,7 +334,9 @@ if __name__ == '__main__':
     else:
         helper.start_epoch = 1
 
-    logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
+    logger.info(
+        f'Total number of params for model {helper.params["model"]}: '
+        f'{sum(p.numel() for p in net.parameters() if p.requires_grad)}')
     if dp:
         criterion = nn.CrossEntropyLoss(reduction='none')
     else:
@@ -361,7 +349,6 @@ if __name__ == '__main__':
     else:
         raise Exception('Specify `optimizer` in params.yaml.')
 
-
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                      milestones=[0.5 * epochs,
                                                                  0.75 * epochs], gamma=0.1)
@@ -370,7 +357,7 @@ if __name__ == '__main__':
     writer.add_text('Model Params', table)
     logger.info(table)
     logger.info(helper.labels)
-    epoch =0
+    epoch = 0
     # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
@@ -386,7 +373,7 @@ if __name__ == '__main__':
                 unb_acc = test(net, epoch, name, value, vis=False)
                 plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
                 unb_acc_dict[name] = unb_acc
-                
+
             unb_acc_list = list(unb_acc_dict.values())
             logger.info(f'Accuracy on unbalanced set: {sorted(unb_acc_list)}')
 
@@ -399,7 +386,6 @@ if __name__ == '__main__':
 
             torch.save(unb_acc_dict, f"{helper.folder_path}/acc_subgroup_{epoch}.pt")
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/subgroup')
-
 
         helper.save_model(net, epoch, main_acc)
     logger.info(f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")
