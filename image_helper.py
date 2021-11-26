@@ -44,7 +44,10 @@ class ImageHelper(Helper):
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
         unbalanced_sum = 0
-        for key, indices in per_class_list.items():
+        for key, indices in per_class_list.items():  # lxuechen: per_class_list maps class id to list of image ids.
+            # TODO(lxuechen): This loop seems wrong. class 0 and class 1-9 don't follow same procedure.
+            #   More generally, should follow power law -- sample size of ith cluster \propto mu^i
+            #   Currently doesn't follow power law for indices > 1.
             if key and key != key_to_drop:
                 unbalanced_sum += len(indices)
             elif key and key == key_to_drop:
@@ -59,6 +62,7 @@ class ImageHelper(Helper):
                 raise ValueError(
                     f"Expected at least {total_number} elements, after sampling left only: {unbalanced_sum}.")
             proportion = total_number / unbalanced_sum
+
         logger.info(sum)
         ds_indices = list()
         subset_lengths = list()
@@ -71,15 +75,21 @@ class ImageHelper(Helper):
                 subset_len = number_of_entries
             else:
                 subset_len = int(len(indices) * (mu ** key) * proportion)
+
             sum += subset_len
             subset_lengths.append(subset_len)
             logger.info(f'Key: {key}, len: {subset_len} class_len {len(indices)}')
             ds_indices.extend(indices[:subset_len])
+
         logger.info(sum)
-        self.dataset_size = sum
         logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
-        self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params[
-            'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
+        self.dataset_size = sum
+        self.train_loader = torch.utils.data.DataLoader(
+            self.train_dataset,
+            batch_size=self.params['batch_size'],
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
+            drop_last=True
+        )
 
     def sampler_exponential_class_test(self, mu=1, key_to_drop=False, number_of_entries_test=False):
         per_class_list = defaultdict(list)

@@ -40,11 +40,13 @@ class Helper:
         if model is None:
             model = self.target_model
         if self.params['save_model']:
-            # save_model
             logger.info("saving model")
             model_name = '{0}/model_last.pt.tar'.format(self.params['folder_path'])
-            saved_dict = {'state_dict': model.state_dict(), 'epoch': epoch,
-                          'lr': self.params['lr']}
+            saved_dict = {
+                'state_dict': model.state_dict(),
+                'epoch': epoch,
+                'lr': self.params['lr']
+            }
             self.save_checkpoint(saved_dict, False, model_name)
             if epoch in self.params['save_on_epochs']:
                 logger.info(f'Saving model on epoch {epoch}')
@@ -126,18 +128,7 @@ class Helper:
                     continue
                 scale = norm_weight[i] / total_norm_weight
                 p.grad.data.mul_(math.sqrt(max_norm) * scale / norm_grad[i])
-        # print(total_norm)
-        # total_norm = 0
-        # norm_grad = dict()
-        # for i, p in enumerate(parameters):
-        #     param_norm = p.grad.data.norm (norm_type)
-        #     norm_grad[i] = param_norm
-        #     total_norm += param_norm.item() ** norm_type
-        # total_norm = total_norm ** (1. / norm_type)
-        # print(total_norm)
         return total_norm
-
-
 
     @staticmethod
     def get_grad_vec(model, device, requires_grad=False):

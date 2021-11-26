@@ -21,6 +21,6 @@ inat_drop_proportional: True
 
 save_model: True
 dataset: cifar10
-model: inception
+model: resnet
 densenet_depth: 100
 scheduler: True

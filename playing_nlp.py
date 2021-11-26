@@ -122,12 +122,9 @@ def train_dp(train_loader, model, optimizer, epoch):
             saved_var[key] = torch.zeros_like(tensor)
 
         for pos, j in enumerate(losses):
-            # print(j)
             j.backward(retain_graph=True)
 
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
-            # total_norm = helper.clip_grad_scale_by_layer_norm(model.parameters(), S)
-            # print(total_norm)
             label_norms[int(labels[pos])].append(total_norm)
             for key, tensor in model.named_parameters():
                 if tensor.grad is not None:
