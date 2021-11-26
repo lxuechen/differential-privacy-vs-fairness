@@ -118,6 +118,7 @@ def train_dp(trainloader, model, optimizer, epoch):
         loss = criterion(outputs, labels)
         running_loss += torch.mean(loss).item()
 
+        # TODO: Why reshape according to micro-batches? Is this to simulate federated learning???
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
 
         saved_var = dict()
@@ -125,11 +126,12 @@ def train_dp(trainloader, model, optimizer, epoch):
             saved_var[tensor_name] = torch.zeros_like(tensor)
         grad_vecs = dict()
         count_vecs = defaultdict(int)
+
+        # Loop over examples in the batch.
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
 
-            if helper.params.get('count_norm_cosine_per_batch', False):
-
+            if helper.params.get('count_norm_cosine_per_batch', False):  # lxuechen: Skipped by default.
                 grad_vec = helper.get_grad_vec(model, device)
                 label = labels[pos].item()
                 count_vecs[label] += 1
@@ -144,10 +146,11 @@ def train_dp(trainloader, model, optimizer, epoch):
             else:
                 label_norms[int(labels[pos])].append(total_norm)
 
+            # lxuechen: Accumulate gradients.
             for tensor_name, tensor in model.named_parameters():
                 if tensor.grad is not None:
                     new_grad = tensor.grad
-                    saved_var[tensor_name].add_(new_grad)
+                    saved_var[tensor_name].add_(new_grad)  # lxuechen: In-place add to save memory.
             model.zero_grad()
 
         for tensor_name, tensor in model.named_parameters():
