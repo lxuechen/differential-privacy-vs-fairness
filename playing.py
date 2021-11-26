@@ -226,7 +226,7 @@ def train(trainloader, model, optimizer, epoch):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PPDL')
-    parser.add_argument('--params', dest='params', default='utils/params.yaml')
+    parser.add_argument('--params', dest='params', default='utils/params_cifar.yaml')
     parser.add_argument('--name', dest='name', required=True)
 
     args = parser.parse_args()

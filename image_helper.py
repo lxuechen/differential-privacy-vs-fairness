@@ -13,9 +13,7 @@ from helper import Helper
 import random
 
 from torchvision import datasets, transforms
-import numpy as np
 from utils.dif_dataset import DiFDataset
-from models.simple import SimpleNet
 from collections import OrderedDict
 
 POISONED_PARTICIPANT_POS = 0
@@ -119,7 +117,6 @@ class ImageHelper(Helper):
     def load_cifar_data(self, dataset):
         logger.info('Loading data')
 
-        ### data load
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
@@ -150,6 +147,9 @@ class ImageHelper(Helper):
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))
             ]))
+        else:
+            raise ValueError(f"Unknown dataset: {dataset}")
+
         self.dataset_size = len(self.train_dataset)
         self.labels = list(range(10))
         return
@@ -272,14 +272,11 @@ class ImageHelper(Helper):
             indices = torch.load(f"{self.params['folder_per_class']}/{x}")
             sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices)
             self.unbalanced_loaders[x] = torch.utils.data.DataLoader(self.test_dataset,
-                                                        batch_size=self.params['test_batch_size'],
-                                                        sampler=sampler,
-                                                        num_workers=2, drop_last=True)
-
-
+                                                                     batch_size=self.params['test_batch_size'],
+                                                                     sampler=sampler,
+                                                                     num_workers=2, drop_last=True)
 
         return True
-
 
     def load_dif_data(self):
 
@@ -330,7 +327,9 @@ class ImageHelper(Helper):
         for key, value in indices_test.items():
             combined_test.extend(value)
             t_l.append(key)
-        logger.info(f"Loaded dataset: labels: {self.labels}, len_train: {len(combined_train)}, len_test: {len(combined_test)} labels: {t_l}")
+        logger.info(
+            f"Loaded dataset: labels: {self.labels}, len_train: {len(combined_train)}, len_test: {len(combined_test)} "
+            f"labels: {t_l}")
 
         train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=combined_train)
         test_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=combined_test)
@@ -348,7 +347,6 @@ class ImageHelper(Helper):
         self.label_skin_list = torch.load(self.params['label_skin_list'])
 
         return True
-
 
     def load_jigsaw(self):
         import pickle
